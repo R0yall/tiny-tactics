@@ -72,15 +72,26 @@ export class ColyseusGameClient {
     }
   }
 
+  private generateRoomCode(): string {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 6; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  }
+
   async createLobby(playerName: string): Promise<void> {
-    const room = await this.client.create('tactics_room', { name: playerName });
+    const roomCode = this.generateRoomCode();
+    const room = await this.client.create('tactics_room', { name: playerName, roomCode });
     this.setupRoom(room);
   }
 
   async joinByCode(roomCode: string, playerName: string): Promise<void> {
+    const code = roomCode.trim().toUpperCase();
     const room = await this.client.join('tactics_room', {
       name: playerName,
-      roomCode: roomCode.trim().toUpperCase()
+      roomCode: code
     });
     this.setupRoom(room);
   }
