@@ -1,9 +1,11 @@
 import http from 'http';
 import express from 'express';
 import cors from 'cors';
-import { Server, matchMaker } from 'colyseus';
+import colyseus from 'colyseus';
 import { WebSocketTransport } from '@colyseus/ws-transport';
 import { TacticsRoom } from './rooms/TacticsRoom.js';
+
+const { Server, matchMaker } = colyseus;
 
 const app = express();
 const port = Number(process.env.PORT || 2567);

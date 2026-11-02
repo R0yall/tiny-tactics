@@ -1,4 +1,7 @@
-import { Room, Client } from 'colyseus';
+import colyseus from 'colyseus';
+import type { Client } from 'colyseus';
+
+const { Room } = colyseus;
 import { TacticsRoomState, PlayerStateSchema } from './schema/TacticsRoomState.js';
 import {
   ClientCommand,
