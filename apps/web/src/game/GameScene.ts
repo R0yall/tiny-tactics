@@ -39,6 +39,14 @@ export class GameScene {
   private highlightMesh: THREE.Mesh;
   private selectionMesh: THREE.Mesh;
 
+  // Drag and drop state
+  private isDragging = false;
+  private dragUnit: RenderedUnit | null = null;
+  private dragStartPos = new THREE.Vector3();
+  private dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), -0.4);
+  private pointerDownPos = { x: 0, y: 0 };
+  private didDragMove = false;
+
   private lastTime = performance.now();
   private animationFrameId?: number;
 
@@ -61,9 +69,9 @@ export class GameScene {
     const height = container.clientHeight || window.innerHeight;
 
     // Perspective camera positioned so entire 8x8 board and all 8 bench slots are clearly visible above shop
-    this.camera = new THREE.PerspectiveCamera(48, width / height, 0.1, 100);
-    this.camera.position.set(0, 19.5, 10.0);
-    this.camera.lookAt(0, 0, 4.8);
+    this.camera = new THREE.PerspectiveCamera(50, width / height, 0.1, 100);
+    this.camera.position.set(0, 20.0, 13.5);
+    this.camera.lookAt(0, 0, 4.2);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(width, height);
@@ -136,15 +144,106 @@ export class GameScene {
   }
 
   private setupEvents(container: HTMLElement): void {
-    const onPointerMove = (e: MouseEvent) => {
+    const updateMouseCoords = (clientX: number, clientY: number) => {
       const rect = container.getBoundingClientRect();
-      this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
-      this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+      this.mouse.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      this.mouse.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+    };
+
+    const onPointerDown = (e: PointerEvent) => {
+      if (this.isSimulating) return;
+      updateMouseCoords(e.clientX, e.clientY);
+      this.pointerDownPos = { x: e.clientX, y: e.clientY };
+      this.didDragMove = false;
+
+      this.raycaster.setFromCamera(this.mouse, this.camera);
+      const unitHitMeshes: THREE.Object3D[] = [];
+      for (const rUnit of this.units.values()) {
+        if (!rUnit.isEnemy) unitHitMeshes.push(rUnit.parts.root);
+      }
+
+      const unitHits = this.raycaster.intersectObjects(unitHitMeshes, true);
+      if (unitHits.length > 0) {
+        let current: THREE.Object3D | null = unitHits[0].object;
+        while (current && !current.userData?.parts) current = current.parent;
+        if (current) {
+          const found = Array.from(this.units.entries()).find(([_, u]) => u.parts.root === current);
+          if (found) {
+            const [id, rUnit] = found;
+            this.dragUnit = rUnit;
+            this.dragStartPos.copy(rUnit.parts.root.position);
+            this.isDragging = true;
+            this.selectedUnitId = id;
+            this.updateSelectionMesh();
+            if (this.onUnitSelected) this.onUnitSelected(rUnit.data);
+          }
+        }
+      }
+    };
+
+    const onPointerMove = (e: PointerEvent) => {
+      updateMouseCoords(e.clientX, e.clientY);
+      this.raycaster.setFromCamera(this.mouse, this.camera);
+
+      if (this.isDragging && this.dragUnit) {
+        const dist = Math.hypot(e.clientX - this.pointerDownPos.x, e.clientY - this.pointerDownPos.y);
+        if (dist > 5) {
+          this.didDragMove = true;
+        }
+
+        if (this.didDragMove) {
+          const hitPoint = new THREE.Vector3();
+          if (this.raycaster.ray.intersectPlane(this.dragPlane, hitPoint)) {
+            this.dragUnit.parts.root.position.x = hitPoint.x;
+            this.dragUnit.parts.root.position.z = hitPoint.z;
+            this.dragUnit.parts.root.position.y = 0.55; // lift up while dragging
+            this.updateSelectionMesh();
+          }
+        }
+      }
 
       this.updateHoverHighlight();
     };
 
+    const onPointerUp = (_e: PointerEvent) => {
+      if (this.isDragging && this.dragUnit) {
+        const draggedUnit = this.dragUnit;
+        const draggedId = draggedUnit.instanceId;
+
+        if (this.didDragMove && this.hoveredTile) {
+          // Valid drop! Request move to server
+          if (this.onMoveRequested) {
+            if (this.hoveredTile.area === 'board') {
+              this.onMoveRequested(draggedId, {
+                area: 'board',
+                x: this.hoveredTile.x!,
+                y: this.hoveredTile.y!
+              });
+            } else {
+              this.onMoveRequested(draggedId, {
+                area: 'bench',
+                benchIndex: this.hoveredTile.benchIndex!
+              });
+            }
+          }
+          this.selectedUnitId = null;
+          if (this.onUnitSelected) this.onUnitSelected(null);
+        } else {
+          // Snap back to original target position
+          draggedUnit.parts.root.position.copy(draggedUnit.targetPosition);
+        }
+
+        this.isDragging = false;
+        this.dragUnit = null;
+        this.updateSelectionMesh();
+      }
+    };
+
     const onClick = (_e: MouseEvent) => {
+      if (this.didDragMove) {
+        this.didDragMove = false;
+        return;
+      }
       this.handlePointerClick();
     };
 
@@ -156,7 +255,9 @@ export class GameScene {
       this.renderer.setSize(w, h);
     };
 
-    container.addEventListener('mousemove', onPointerMove);
+    container.addEventListener('pointerdown', onPointerDown);
+    container.addEventListener('pointermove', onPointerMove);
+    window.addEventListener('pointerup', onPointerUp);
     container.addEventListener('click', onClick);
     window.addEventListener('resize', onResize);
   }
@@ -188,7 +289,7 @@ export class GameScene {
         }
       } else if (meta.tileType === 'bench' && meta.benchIndex !== undefined) {
         this.hoveredTile = { area: 'bench', benchIndex: meta.benchIndex };
-        this.highlightMesh.position.set(hit.position.x, 0.18, hit.position.z);
+        this.highlightMesh.position.set(hit.position.x, 0.10, hit.position.z);
         this.highlightMesh.visible = true;
         return;
       }
@@ -293,7 +394,7 @@ export class GameScene {
       this.selectionMesh.visible = false;
       return;
     }
-    const groundY = unit.parts.root.position.y >= 0.2 ? 0.24 : 0.12;
+    const groundY = unit.data.placement.area === 'bench' ? 0.10 : 0.09;
     this.selectionMesh.position.set(unit.parts.root.position.x, groundY, unit.parts.root.position.z);
     this.selectionMesh.visible = true;
   }
@@ -548,7 +649,10 @@ export class GameScene {
     for (const rUnit of this.units.values()) {
       rUnit.animator.update(deltaSec);
 
-      // Smooth interpolation to target position
+      // Smooth interpolation to target position (skip while actively dragging)
+      if (this.isDragging && this.dragUnit === rUnit) {
+        continue;
+      }
       rUnit.parts.root.position.lerp(rUnit.targetPosition, 0.15);
     }
 

@@ -1,27 +1,22 @@
 import React from 'react';
 import { ColyseusGameClient, PrivateStateData, PlayerPublicData } from '../network/colyseusClient.js';
 import { UNITS, ALLIANCES, SHOP_TIER_ODDS_BY_LEVEL, UNIT_COSTS } from '@tiny-tactics/data';
-import { MatchPhase, PROTOCOL_CONSTANTS, PlacedUnit } from '@tiny-tactics/shared';
+import { MatchPhase, PROTOCOL_CONSTANTS } from '@tiny-tactics/shared';
 import { RefreshCw, Lock, Unlock, ArrowUpCircle, Coins, ChevronDown, ShoppingBag } from 'lucide-react';
 import { ShopUnitPreview } from './ShopUnitPreview.js';
-import { BenchBar } from './BenchBar.js';
 
 interface ShopPanelProps {
   client: ColyseusGameClient;
   privateState: PrivateStateData;
   player: PlayerPublicData;
   phase: MatchPhase;
-  selectedUnit: PlacedUnit | null;
-  onSelectUnit: (unit: PlacedUnit | null) => void;
 }
 
 export const ShopPanel: React.FC<ShopPanelProps> = ({
   client,
   privateState,
   player,
-  phase,
-  selectedUnit,
-  onSelectUnit
+  phase
 }) => {
   const isPrep = phase === 'preparation';
   const odds = SHOP_TIER_ODDS_BY_LEVEL[player.level] || SHOP_TIER_ODDS_BY_LEVEL[2];
@@ -71,16 +66,7 @@ export const ShopPanel: React.FC<ShopPanelProps> = ({
 
   if (isCollapsed) {
     return (
-      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-1.5">
-        <BenchBar
-          client={client}
-          benchUnits={privateState.benchUnits}
-          selectedUnitId={selectedUnit?.instanceId || null}
-          onSelectUnit={onSelectUnit}
-          playerLevel={player.level}
-          boardCount={player.boardUnits.length}
-          isPrep={isPrep}
-        />
+      <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3">
         <button
           onClick={() => setIsCollapsed(false)}
           className="glass-panel px-5 py-2 rounded-full border border-sky-400/50 bg-slate-900/90 hover:bg-slate-800 text-slate-200 text-xs font-bold shadow-2xl flex items-center gap-3 cursor-pointer transition hover:scale-105 active:scale-95"
@@ -99,27 +85,15 @@ export const ShopPanel: React.FC<ShopPanelProps> = ({
 
   return (
     <div className="absolute bottom-2 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-1.5">
-      {/* Bench Bar + Odds Bar Header */}
-      <div className="flex items-center gap-2 flex-wrap justify-center">
-        <BenchBar
-          client={client}
-          benchUnits={privateState.benchUnits}
-          selectedUnitId={selectedUnit?.instanceId || null}
-          onSelectUnit={onSelectUnit}
-          playerLevel={player.level}
-          boardCount={player.boardUnits.length}
-          isPrep={isPrep}
-        />
-
-        {/* Tier Probability Bar & Collapse Button */}
+      {/* Tier Probability Bar & Collapse Button */}
+      <div className="flex items-center gap-2">
         <div className="glass-panel px-3 py-1 rounded-full text-[10px] font-semibold flex items-center gap-2.5 text-slate-400 border border-slate-700/60">
-          <span className="text-slate-300">Lvl {player.level}:</span>
+          <span className="text-slate-300">Level {player.level} Odds:</span>
           <span className="text-slate-200">T1: {odds[0]}%</span>
           <span className="text-emerald-400">T2: {odds[1]}%</span>
           <span className="text-sky-400">T3: {odds[2]}%</span>
           <span className="text-purple-400">T4: {odds[3]}%</span>
         </div>
-
         <button
           onClick={() => setIsCollapsed(true)}
           title="Minimize Shop (Space)"

@@ -13,7 +13,7 @@ export class BoardFactory {
   static readonly TILE_SIZE = 1.6;
   static readonly BOARD_OFFSET_X = -(8 * 1.6) / 2 + 1.6 / 2;
   static readonly BOARD_OFFSET_Z = -(8 * 1.6) / 2 + 1.6 / 2;
-  static readonly BENCH_Z = 6.8;
+  static readonly BENCH_Z = 7.5;
 
   static createBoard(): {
     boardGroup: THREE.Group;
@@ -32,7 +32,7 @@ export class BoardFactory {
     const baseGeo = new THREE.BoxGeometry(
       boardWidth * tileSize + 0.8,
       0.6,
-      boardHeight * tileSize + 2.6
+      boardHeight * tileSize + 3.2
     );
     const baseMat = new THREE.MeshStandardMaterial({
       color: 0x1e293b,
@@ -41,7 +41,7 @@ export class BoardFactory {
       flatShading: true
     });
     const baseMesh = new THREE.Mesh(baseGeo, baseMat);
-    baseMesh.position.set(0, -0.35, 0.7);
+    baseMesh.position.set(0, -0.35, 1.0);
     baseMesh.receiveShadow = true;
     boardGroup.add(baseMesh);
 
@@ -49,7 +49,7 @@ export class BoardFactory {
     const rimGeo = new THREE.BoxGeometry(
       boardWidth * tileSize + 0.9,
       0.1,
-      boardHeight * tileSize + 2.7
+      boardHeight * tileSize + 3.3
     );
     const rimMat = new THREE.MeshStandardMaterial({
       color: 0x475569,
@@ -58,7 +58,7 @@ export class BoardFactory {
       flatShading: true
     });
     const rimMesh = new THREE.Mesh(rimGeo, rimMat);
-    rimMesh.position.set(0, -0.05, 0.7);
+    rimMesh.position.set(0, -0.05, 1.0);
     boardGroup.add(rimMesh);
 
     // 2. 8x8 Board Tiles
@@ -88,20 +88,19 @@ export class BoardFactory {
       }
     }
 
-    // 3. Bench Slots (8 glowing tactical pedestals in front of the board)
-    const benchGeo = new THREE.CylinderGeometry(0.72, 0.78, 0.22, 16);
+    // 3. Bench Slots (8 platforms in front of the board)
+    const benchGeo = new THREE.CylinderGeometry(0.70, 0.75, 0.16, 8);
     const benchMat = new THREE.MeshStandardMaterial({
       color: 0x334155,
-      emissive: 0x0f172a,
-      roughness: 0.4,
-      metalness: 0.6,
+      roughness: 0.6,
+      metalness: 0.3,
       flatShading: true
     });
-    const benchRingGeo = new THREE.RingGeometry(0.52, 0.70, 24);
+    const benchRingGeo = new THREE.RingGeometry(0.55, 0.68, 16);
     const benchRingMat = new THREE.MeshBasicMaterial({
       color: 0x38bdf8,
       transparent: true,
-      opacity: 0.75,
+      opacity: 0.35,
       side: THREE.DoubleSide
     });
 
@@ -109,13 +108,13 @@ export class BoardFactory {
     for (let i = 0; i < PROTOCOL_CONSTANTS.BENCH_SIZE; i++) {
       const mesh = new THREE.Mesh(benchGeo, benchMat.clone());
       const posX = benchStartX + i * 1.6;
-      mesh.position.set(posX, 0.11, this.BENCH_Z);
+      mesh.position.set(posX, 0.08, this.BENCH_Z);
       mesh.receiveShadow = true;
 
-      // Radiant cyan rune glow ring on bench surface
+      // Subtle cyan glow ring on bench surface
       const ring = new THREE.Mesh(benchRingGeo, benchRingMat);
       ring.rotation.x = -Math.PI / 2;
-      ring.position.y = 0.12;
+      ring.position.y = 0.09;
       mesh.add(ring);
 
       mesh.userData = {
@@ -213,7 +212,7 @@ export class BoardFactory {
     const benchStartX = -(8 * 1.6) / 2 + 1.6 / 2;
     return new THREE.Vector3(
       benchStartX + benchIndex * 1.6,
-      0.23,
+      0.16,
       this.BENCH_Z
     );
   }

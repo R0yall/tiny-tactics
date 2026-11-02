@@ -140,11 +140,6 @@ export const App: React.FC = () => {
             privateState={client.privateState}
             player={me}
             phase={client.phase}
-            selectedUnit={selectedUnit}
-            onSelectUnit={unit => {
-              setSelectedUnit(unit);
-              sceneRef.current?.selectUnitById(unit ? unit.instanceId : null);
-            }}
           />
 
           <UnitDetailsModal
