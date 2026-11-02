@@ -15,7 +15,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   roomCode,
   isHost
 }) => {
-  const [playerName, setPlayerName] = useState(() => localStorage.getItem('tt_player_name') || 'Guest' + Math.floor(1000 + Math.random() * 9000));
+  const [playerName, setPlayerName] = useState(() => sessionStorage.getItem('tt_player_name') || 'Guest' + Math.floor(1000 + Math.random() * 9000));
   const [joinCodeInput, setJoinCodeInput] = useState('');
   const [openLobbies, setOpenLobbies] = useState<{ roomId: string; roomCode: string; clients: number; maxClients: number }[]>([]);
   const [showLobbyBrowser, setShowLobbyBrowser] = useState(false);
@@ -23,7 +23,7 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
   const [errorMsg, setErrorMsg] = useState('');
 
   useEffect(() => {
-    localStorage.setItem('tt_player_name', playerName);
+    sessionStorage.setItem('tt_player_name', playerName);
   }, [playerName]);
 
   const fetchOpenLobbies = async () => {
@@ -261,6 +261,13 @@ export const LobbyScreen: React.FC<LobbyScreenProps> = ({
 
         {/* Action Controls */}
         <div className="flex gap-3 pt-2">
+          <button
+            onClick={() => client.leave()}
+            className="px-4 py-3 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-xs font-bold rounded-xl transition border border-slate-700 cursor-pointer"
+          >
+            Leave
+          </button>
+
           {!isHost && (
             <button
               onClick={handleToggleReady}

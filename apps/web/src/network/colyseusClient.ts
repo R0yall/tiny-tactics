@@ -57,10 +57,16 @@ export class ColyseusGameClient {
     const serverUrl = import.meta.env.VITE_SERVER_URL || `${window.location.protocol === 'https:' ? 'wss:' : 'ws:'}//${window.location.hostname}:2567`;
     this.client = new Client(serverUrl);
 
-    // Load existing resume token from localStorage if any
-    const savedToken = localStorage.getItem('tt_resume_token');
-    const savedPlayerId = localStorage.getItem('tt_player_id');
-    if (savedToken && savedPlayerId) {
+    // Clean up any legacy localStorage tokens from previous versions
+    localStorage.removeItem('tt_resume_token');
+    localStorage.removeItem('tt_player_id');
+
+    // Use sessionStorage (isolated per tab)
+    const savedToken = sessionStorage.getItem('tt_resume_token');
+    const savedPlayerId = sessionStorage.getItem('tt_player_id');
+    const savedMatchActive = sessionStorage.getItem('tt_match_active');
+
+    if (savedToken && savedPlayerId && savedMatchActive === 'true') {
       this.resumeToken = savedToken;
       this.playerId = savedPlayerId;
     }
@@ -80,7 +86,11 @@ export class ColyseusGameClient {
   }
 
   async resumePreviousSession(): Promise<boolean> {
-    if (!this.resumeToken || !this.playerId) return false;
+    const savedMatchActive = sessionStorage.getItem('tt_match_active');
+    if (!this.resumeToken || !this.playerId || savedMatchActive !== 'true') {
+      return false;
+    }
+
     try {
       const room = await this.client.join('tactics_room', {
         playerId: this.playerId,
@@ -89,8 +99,9 @@ export class ColyseusGameClient {
       this.setupRoom(room);
       return true;
     } catch (err) {
-      localStorage.removeItem('tt_resume_token');
-      localStorage.removeItem('tt_player_id');
+      sessionStorage.removeItem('tt_resume_token');
+      sessionStorage.removeItem('tt_player_id');
+      sessionStorage.removeItem('tt_match_active');
       return false;
     }
   }
@@ -104,8 +115,8 @@ export class ColyseusGameClient {
       this.roomCode = data.roomCode;
       this.isHost = data.isHost;
 
-      localStorage.setItem('tt_resume_token', data.resumeToken);
-      localStorage.setItem('tt_player_id', data.playerId);
+      sessionStorage.setItem('tt_resume_token', data.resumeToken);
+      sessionStorage.setItem('tt_player_id', data.playerId);
 
       if (this.onStateChanged) this.onStateChanged();
     });
@@ -126,6 +137,7 @@ export class ColyseusGameClient {
     });
 
     room.onMessage('matchEnd', (data: { winnerName: string; rankings: any[] }) => {
+      sessionStorage.removeItem('tt_match_active');
       if (this.onMatchEnded) this.onMatchEnded(data.winnerName, data.rankings);
     });
 
@@ -138,6 +150,10 @@ export class ColyseusGameClient {
       this.phaseTimeRemaining = state.phaseTimeRemaining;
       this.roundNumber = state.roundNumber;
       this.roomCode = state.roomCode;
+
+      if (this.phase !== 'lobby' && this.phase !== 'ended') {
+        sessionStorage.setItem('tt_match_active', 'true');
+      }
 
       this.players.clear();
       state.players.forEach((p: any, key: string) => {
@@ -182,5 +198,14 @@ export class ColyseusGameClient {
       this.room.leave();
       this.room = null;
     }
+    this.phase = 'lobby';
+    this.roomCode = '';
+    this.playerId = '';
+    this.resumeToken = '';
+    this.players.clear();
+    sessionStorage.removeItem('tt_resume_token');
+    sessionStorage.removeItem('tt_player_id');
+    sessionStorage.removeItem('tt_match_active');
+    if (this.onStateChanged) this.onStateChanged();
   }
 }

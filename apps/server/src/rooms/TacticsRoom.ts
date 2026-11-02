@@ -50,8 +50,9 @@ export class TacticsRoom extends Room<TacticsRoomState> {
 
   onCreate(options: any) {
     this.setState(new TacticsRoomState());
-    this.state.roomCode = this.generateRoomCode();
+    this.state.roomCode = (options?.roomCode || this.generateRoomCode()).toUpperCase();
     this.state.phase = 'lobby';
+    this.setMetadata({ roomCode: this.state.roomCode, phase: 'lobby' });
 
     this.registerMessageHandlers();
   }
@@ -144,6 +145,10 @@ export class TacticsRoom extends Room<TacticsRoomState> {
   }
 
   onJoin(client: Client, options: any) {
+    if (options.roomCode && options.roomCode.trim().toUpperCase() !== this.state.roomCode) {
+      throw new Error('Room code does not match');
+    }
+
     if (this.state.phase !== 'lobby') {
       // Reconnect check
       if (options.resumeToken && options.playerId) {
@@ -151,6 +156,10 @@ export class TacticsRoom extends Room<TacticsRoomState> {
         if (resumed) return;
       }
       throw new Error('Match in progress. Room is locked to new players.');
+    }
+
+    if (this.state.players.size >= this.maxClients) {
+      throw new Error('Room is full (max 8 players).');
     }
 
     const playerId = client.sessionId;
