@@ -36,6 +36,8 @@ export const App: React.FC = () => {
     if (containerRef.current && !sceneRef.current) {
       const scene = new GameScene(containerRef.current);
       sceneRef.current = scene;
+      (window as any).__scene = scene;
+      (window as any).__client = client;
 
       scene.onUnitSelected = unit => setSelectedUnit(unit);
       scene.onMoveRequested = (instanceId: string, target: UnitPlacement) => {
@@ -88,9 +90,15 @@ export const App: React.FC = () => {
     // Try auto-resuming disconnected session if available
     client.resumePreviousSession();
 
-    return () => {
-      sceneRef.current?.dispose();
+    const onBeforeUnload = () => {
       client.leave();
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      sceneRef.current?.dispose();
+      sceneRef.current = null;
     };
   }, [client]);
 

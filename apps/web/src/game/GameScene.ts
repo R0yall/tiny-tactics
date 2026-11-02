@@ -49,6 +49,7 @@ export class GameScene {
 
   private lastTime = performance.now();
   private animationFrameId?: number;
+  private cleanupEvents?: () => void;
 
   // Combat playback state
   private activeSim: CombatSimulationResult | null = null;
@@ -260,6 +261,14 @@ export class GameScene {
     window.addEventListener('pointerup', onPointerUp);
     container.addEventListener('click', onClick);
     window.addEventListener('resize', onResize);
+
+    this.cleanupEvents = () => {
+      container.removeEventListener('pointerdown', onPointerDown);
+      container.removeEventListener('pointermove', onPointerMove);
+      window.removeEventListener('pointerup', onPointerUp);
+      container.removeEventListener('click', onClick);
+      window.removeEventListener('resize', onResize);
+    };
   }
 
   private updateHoverHighlight(): void {
@@ -661,7 +670,17 @@ export class GameScene {
   };
 
   dispose(): void {
-    if (this.animationFrameId) cancelAnimationFrame(this.animationFrameId);
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+      this.animationFrameId = undefined;
+    }
+    if (this.cleanupEvents) {
+      this.cleanupEvents();
+      this.cleanupEvents = undefined;
+    }
+    if (this.renderer.domElement && this.renderer.domElement.parentElement) {
+      this.renderer.domElement.parentElement.removeChild(this.renderer.domElement);
+    }
     this.renderer.dispose();
   }
 }
