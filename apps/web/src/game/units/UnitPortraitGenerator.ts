@@ -77,7 +77,6 @@ class PortraitGenerator {
     }
     // Clean up temporary renderer and free WebGL context
     if (this.renderer) {
-      this.renderer.forceContextLoss();
       this.renderer.dispose();
       this.renderer = null;
       this.scene = null;

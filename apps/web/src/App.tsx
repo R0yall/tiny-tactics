@@ -50,14 +50,21 @@ export const App: React.FC = () => {
       };
     }
 
+    client.onPrivateStateChanged = (benchUnits: PlacedUnit[]) => {
+      if (sceneRef.current) {
+        const me = client.players.get(client.playerId) || Array.from(client.players.values()).find(p => p.id === client.playerId);
+        const boardUnits = me ? me.boardUnits : [];
+        sceneRef.current.syncPreparationUnits(boardUnits, benchUnits);
+      }
+    };
+
     client.onStateChanged = () => {
       setTick(t => t + 1);
 
       if (sceneRef.current && client.phase === 'preparation') {
-        const me = client.players.get(client.playerId);
-        if (me) {
-          sceneRef.current.syncPreparationUnits(me.boardUnits, client.privateState.benchUnits);
-        }
+        const me = client.players.get(client.playerId) || Array.from(client.players.values()).find(p => p.id === client.playerId);
+        const boardUnits = me ? me.boardUnits : [];
+        sceneRef.current.syncPreparationUnits(boardUnits, client.privateState.benchUnits);
       }
     };
 

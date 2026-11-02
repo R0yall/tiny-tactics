@@ -38,6 +38,7 @@ export class ColyseusGameClient {
 
   // React listeners
   public onStateChanged?: () => void;
+  public onPrivateStateChanged?: (benchUnits: PlacedUnit[]) => void;
   public onCombatStarted?: (opponentName: string, isGhost: boolean, sim: CombatSimulationResult) => void;
   public onUnitMerged?: (upgradedUnitId: string, newStar: number) => void;
   public onMatchEnded?: (winnerName: string, rankings: { name: string; rank: number }[]) => void;
@@ -134,6 +135,7 @@ export class ColyseusGameClient {
 
     room.onMessage('privateState', (data: PrivateStateData) => {
       this.privateState = data;
+      if (this.onPrivateStateChanged) this.onPrivateStateChanged(data.benchUnits);
       if (this.onStateChanged) this.onStateChanged();
     });
 
@@ -175,7 +177,7 @@ export class ColyseusGameClient {
           alliances = JSON.parse(p.activeAlliancesJson || '{}');
         } catch {}
 
-        this.players.set(key, {
+        const pData: PlayerPublicData = {
           id: p.id,
           name: p.name,
           hp: p.hp,
@@ -188,7 +190,9 @@ export class ColyseusGameClient {
           eliminated: p.eliminated,
           boardUnits,
           activeAlliances: alliances
-        });
+        };
+        this.players.set(key, pData);
+        if (p.id) this.players.set(p.id, pData);
 
         if (p.id === this.playerId) {
           this.isHost = p.isHost;
