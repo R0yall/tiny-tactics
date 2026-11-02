@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+:root {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  background: #0f172a;
+  color: #f8fafc;
+  user-select: none;
+}
+
+#root {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Glassmorphism panel helper */
+.glass-panel {
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.gold-glow {
+  text-shadow: 0 0 8px rgba(245, 158, 11, 0.6);
+}
+
+.star-1 {
+  color: #94a3b8;
+}
+
+.star-2 {
+  color: #38bdf8;
+  filter: drop-shadow(0 0 4px #0284c7);
+}
+
+.star-3 {
+  color: #f59e0b;
+  filter: drop-shadow(0 0 6px #d97706);
+}
+
+/* Floating damage numbers */
+.floating-damage {
+  position: absolute;
+  pointer-events: none;
+  font-weight: 800;
+  font-size: 1.1rem;
+  animation: floatUp 1.2s ease-out forwards;
+}
+
+@keyframes floatUp {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1.1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-40px) scale(0.9);
+  }
+}
