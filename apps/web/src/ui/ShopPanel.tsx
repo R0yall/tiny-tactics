@@ -2,7 +2,8 @@ import React from 'react';
 import { ColyseusGameClient, PrivateStateData, PlayerPublicData } from '../network/colyseusClient.js';
 import { UNITS, ALLIANCES, SHOP_TIER_ODDS_BY_LEVEL, UNIT_COSTS } from '@tiny-tactics/data';
 import { MatchPhase, PROTOCOL_CONSTANTS } from '@tiny-tactics/shared';
-import { RefreshCw, Lock, Unlock, ArrowUpCircle, Coins } from 'lucide-react';
+import { RefreshCw, Lock, Unlock, ArrowUpCircle, Coins, ChevronDown, ShoppingBag } from 'lucide-react';
+import { ShopUnitPreview } from './ShopUnitPreview.js';
 
 interface ShopPanelProps {
   client: ColyseusGameClient;
@@ -19,6 +20,29 @@ export const ShopPanel: React.FC<ShopPanelProps> = ({
 }) => {
   const isPrep = phase === 'preparation';
   const odds = SHOP_TIER_ODDS_BY_LEVEL[player.level] || SHOP_TIER_ODDS_BY_LEVEL[2];
+  const [isCollapsed, setIsCollapsed] = React.useState(phase === 'combat');
+
+  // Auto-collapse when combat begins, auto-expand when preparation begins
+  React.useEffect(() => {
+    if (phase === 'combat') {
+      setIsCollapsed(true);
+    } else if (phase === 'preparation') {
+      setIsCollapsed(false);
+    }
+  }, [phase]);
+
+  // Spacebar or 'D' hotkey to toggle shop
+  React.useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+      if (e.code === 'Space' || e.key === 'd' || e.key === 'D') {
+        e.preventDefault();
+        setIsCollapsed(prev => !prev);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   const handleBuy = (slotIndex: number) => {
     if (!isPrep) return;
@@ -40,15 +64,44 @@ export const ShopPanel: React.FC<ShopPanelProps> = ({
     client.sendCommand({ type: 'buyXp' });
   };
 
+  if (isCollapsed) {
+    return (
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 flex items-center gap-3">
+        <button
+          onClick={() => setIsCollapsed(false)}
+          className="glass-panel px-5 py-2.5 rounded-full border border-sky-400/50 bg-slate-900/90 hover:bg-slate-800 text-slate-200 text-xs font-bold shadow-2xl flex items-center gap-3 cursor-pointer transition hover:scale-105 active:scale-95"
+        >
+          <span className="flex items-center gap-1.5 text-amber-300 font-mono font-extrabold">
+            <Coins size={14} /> {player.gold} Gold
+          </span>
+          <span className="w-px h-3 bg-slate-700" />
+          <span className="flex items-center gap-1.5 text-sky-300">
+            <ShoppingBag size={14} /> Open Shop <span className="text-[10px] text-slate-400 font-normal">[Space]</span>
+          </span>
+        </button>
+      </div>
+    );
+  }
+
   return (
     <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-40 flex flex-col items-center gap-2">
-      {/* Tier Probability Bar */}
-      <div className="glass-panel px-4 py-1 rounded-full text-[11px] font-semibold flex items-center gap-4 text-slate-400 border border-slate-700/60">
-        <span className="text-slate-300">Level {player.level} Odds:</span>
-        <span className="text-slate-200">T1: {odds[0]}%</span>
-        <span className="text-emerald-400">T2: {odds[1]}%</span>
-        <span className="text-sky-400">T3: {odds[2]}%</span>
-        <span className="text-purple-400">T4: {odds[3]}%</span>
+      {/* Tier Probability Bar & Collapse Button */}
+      <div className="flex items-center gap-2">
+        <div className="glass-panel px-4 py-1 rounded-full text-[11px] font-semibold flex items-center gap-4 text-slate-400 border border-slate-700/60">
+          <span className="text-slate-300">Level {player.level} Odds:</span>
+          <span className="text-slate-200">T1: {odds[0]}%</span>
+          <span className="text-emerald-400">T2: {odds[1]}%</span>
+          <span className="text-sky-400">T3: {odds[2]}%</span>
+          <span className="text-purple-400">T4: {odds[3]}%</span>
+        </div>
+        <button
+          onClick={() => setIsCollapsed(true)}
+          title="Minimize Shop (Space)"
+          className="glass-panel px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center gap-1 text-slate-400 hover:text-slate-200 border border-slate-700/60 hover:bg-slate-800 transition cursor-pointer"
+        >
+          <span>Hide</span>
+          <ChevronDown size={14} />
+        </button>
       </div>
 
       <div className="glass-panel p-3 rounded-2xl border border-slate-700/60 flex items-center gap-3">
@@ -151,17 +204,10 @@ export const ShopPanel: React.FC<ShopPanelProps> = ({
                   </span>
                 </div>
 
-                {/* Silhouette / Name */}
-                <div className="flex flex-col items-center my-1 text-center">
-                  <div
-                    className="w-12 h-12 rounded-xl flex items-center justify-center text-2xl shadow-inner mb-1.5"
-                    style={{ backgroundColor: `${def.colorPalette.primary}33`, borderColor: def.colorPalette.primary, borderWidth: 1 }}
-                  >
-                    {def.shapeArchetype === 'knight' ? '🛡️' :
-                     def.shapeArchetype === 'archer' ? '🏹' :
-                     def.shapeArchetype === 'caster' ? '🔮' :
-                     def.shapeArchetype === 'rogue' ? '🗡️' :
-                     def.shapeArchetype === 'beast' ? '🐾' : '🗿'}
+                {/* 3D Model Preview / Name */}
+                <div className="flex flex-col items-center my-0.5 text-center">
+                  <div className="w-[110px] h-[85px] flex items-center justify-center -my-1">
+                    <ShopUnitPreview unitDef={def} />
                   </div>
                   <span className="font-extrabold text-xs text-slate-100 truncate w-full">{def.name}</span>
                 </div>

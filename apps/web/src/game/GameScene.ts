@@ -37,6 +37,7 @@ export class GameScene {
   private selectedUnitId: string | null = null;
   private hoveredTile: { area: 'board' | 'bench'; x?: number; y?: number; benchIndex?: number } | null = null;
   private highlightMesh: THREE.Mesh;
+  private selectionMesh: THREE.Mesh;
 
   private lastTime = performance.now();
   private animationFrameId?: number;
@@ -59,9 +60,9 @@ export class GameScene {
     const width = container.clientWidth || window.innerWidth;
     const height = container.clientHeight || window.innerHeight;
 
-    // Perspective camera at ~50 degrees tilt looking at board center
+    // Perspective camera angled to view full board + bench with room for shop
     this.camera = new THREE.PerspectiveCamera(48, width / height, 0.1, 100);
-    this.camera.position.set(0, 11.5, 9.8);
+    this.camera.position.set(0, 13.0, 11.2);
     this.camera.lookAt(0, 0, 0.8);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -94,6 +95,20 @@ export class GameScene {
     this.highlightMesh.position.y = 0.08;
     this.highlightMesh.visible = false;
     this.scene.add(this.highlightMesh);
+
+    // Interactive unit selection ring
+    const selGeo = new THREE.RingGeometry(0.55, 0.82, 24);
+    const selMat = new THREE.MeshBasicMaterial({
+      color: 0xf59e0b,
+      transparent: true,
+      opacity: 0.85,
+      side: THREE.DoubleSide
+    });
+    this.selectionMesh = new THREE.Mesh(selGeo, selMat);
+    this.selectionMesh.rotation.x = -Math.PI / 2;
+    this.selectionMesh.position.y = 0.12;
+    this.selectionMesh.visible = false;
+    this.scene.add(this.selectionMesh);
 
     this.setupEvents(container);
     this.animate();
@@ -173,7 +188,7 @@ export class GameScene {
         }
       } else if (meta.tileType === 'bench' && meta.benchIndex !== undefined) {
         this.hoveredTile = { area: 'bench', benchIndex: meta.benchIndex };
-        this.highlightMesh.position.set(hit.position.x, 0.08, hit.position.z);
+        this.highlightMesh.position.set(hit.position.x, 0.18, hit.position.z);
         this.highlightMesh.visible = true;
         return;
       }
@@ -218,6 +233,7 @@ export class GameScene {
             this.selectedUnitId = clickedId;
             if (this.onUnitSelected) this.onUnitSelected(clickedUnit.data);
           }
+          this.updateSelectionMesh();
           return;
         }
       }
@@ -240,8 +256,23 @@ export class GameScene {
         }
       }
       this.selectedUnitId = null;
+      this.updateSelectionMesh();
       if (this.onUnitSelected) this.onUnitSelected(null);
     }
+  }
+
+  private updateSelectionMesh(): void {
+    if (!this.selectedUnitId || this.isSimulating) {
+      this.selectionMesh.visible = false;
+      return;
+    }
+    const unit = this.units.get(this.selectedUnitId);
+    if (!unit) {
+      this.selectionMesh.visible = false;
+      return;
+    }
+    this.selectionMesh.position.set(unit.parts.root.position.x, 0.12, unit.parts.root.position.z);
+    this.selectionMesh.visible = true;
   }
 
   syncPreparationUnits(boardUnits: PlacedUnit[], benchUnits: PlacedUnit[]): void {
@@ -315,6 +346,7 @@ export class GameScene {
     this.isSimulating = true;
     this.selectedUnitId = null;
     this.highlightMesh.visible = false;
+    this.updateSelectionMesh();
 
     // Clear existing scene units and instantiate from simulation snapshots
     for (const rUnit of this.units.values()) {

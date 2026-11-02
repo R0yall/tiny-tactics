@@ -17,7 +17,7 @@ export const AlliancePanel: React.FC<AlliancePanelProps> = ({ activeAlliances })
   });
 
   return (
-    <div className="absolute top-28 left-4 z-40 flex flex-col gap-1.5 max-w-[210px]">
+    <div className="absolute top-[185px] left-4 z-40 flex flex-col gap-1.5 max-w-[220px] max-h-[calc(100vh-430px)] overflow-y-auto pr-1 select-none">
       <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 px-1">
         Synergies
       </div>
