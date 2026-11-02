@@ -17,7 +17,7 @@ interface DamagePopup {
 
 export const App: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const clientRef = useRef<ColyseusGameClient | null>(null);
+  const [client] = useState(() => new ColyseusGameClient());
   const sceneRef = useRef<GameScene | null>(null);
 
   const [, setTick] = useState(0);
@@ -26,10 +26,7 @@ export const App: React.FC = () => {
   const [damagePopups, setDamagePopups] = useState<DamagePopup[]>([]);
 
   useEffect(() => {
-    const client = new ColyseusGameClient();
-    clientRef.current = client;
-
-    if (containerRef.current) {
+    if (containerRef.current && !sceneRef.current) {
       const scene = new GameScene(containerRef.current);
       sceneRef.current = scene;
 
@@ -81,10 +78,7 @@ export const App: React.FC = () => {
       sceneRef.current?.dispose();
       client.leave();
     };
-  }, []);
-
-  const client = clientRef.current;
-  if (!client) return null;
+  }, [client]);
 
   const me = client.players.get(client.playerId);
   const isLobby = client.phase === 'lobby';
