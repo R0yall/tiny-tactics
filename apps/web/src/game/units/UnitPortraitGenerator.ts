@@ -47,8 +47,7 @@ class PortraitGenerator {
     if (!this.renderer || !this.scene || !this.camera) return [];
 
     const parts = UnitFactory.createUnitMesh(unitDef, 1);
-    parts.hpBar.visible = false;
-    parts.manaBar.visible = false;
+    parts.barsGroup.visible = false;
     this.scene.add(parts.root);
 
     const animator = new UnitAnimator(parts);

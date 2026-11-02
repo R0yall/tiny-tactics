@@ -1,6 +1,6 @@
 import React from 'react';
 import { ColyseusGameClient, PrivateStateData, PlayerPublicData } from '../network/colyseusClient.js';
-import { UNITS, ALLIANCES, SHOP_TIER_ODDS_BY_LEVEL, UNIT_COSTS } from '@tiny-tactics/data';
+import { UNITS, ALLIANCES, ABILITIES, SHOP_TIER_ODDS_BY_LEVEL, UNIT_COSTS } from '@tiny-tactics/data';
 import { MatchPhase, PROTOCOL_CONSTANTS } from '@tiny-tactics/shared';
 import { RefreshCw, Lock, Unlock, ArrowUpCircle, Coins, ChevronDown, ShoppingBag } from 'lucide-react';
 import { ShopUnitPreview } from './ShopUnitPreview.js';
@@ -227,6 +227,28 @@ export const ShopPanel: React.FC<ShopPanelProps> = ({
                       </div>
                     );
                   })}
+                </div>
+
+                {/* Hover Popover with full stats & ability preview */}
+                <div className="absolute inset-0 bg-slate-950/95 backdrop-blur-md p-2 flex flex-col justify-between opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none z-20 text-[10px]">
+                  <div>
+                    <div className="font-extrabold text-slate-100 text-[11px] truncate">{def.name}</div>
+                    <div className="text-[9px] text-amber-400 font-bold uppercase">{def.shapeArchetype}</div>
+                  </div>
+                  <div className="bg-slate-900/90 p-1.5 rounded-lg border border-slate-800">
+                    <span className="font-bold text-sky-400 text-[9px] block">
+                      {ABILITIES[def.abilityId]?.name || 'Ability'}
+                    </span>
+                    <p className="text-[9px] text-slate-300 leading-tight line-clamp-3">
+                      {ABILITIES[def.abilityId]?.description || ''}
+                    </p>
+                  </div>
+                  <div className="flex justify-between text-[9px] text-slate-300 font-semibold pt-0.5 border-t border-slate-800/80">
+                    <span>⚔️ {def.baseAttack}</span>
+                    <span>🛡️ {def.armor}</span>
+                    <span>❤️ {def.baseHp}</span>
+                    <span>🎯 {def.range}</span>
+                  </div>
                 </div>
               </div>
             );

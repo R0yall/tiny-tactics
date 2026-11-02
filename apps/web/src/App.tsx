@@ -6,6 +6,7 @@ import { HUD } from './ui/HUD.js';
 import { ShopPanel } from './ui/ShopPanel.js';
 import { AlliancePanel } from './ui/AlliancePanel.js';
 import { UnitDetailsModal } from './ui/UnitDetailsModal.js';
+import { UnitTooltip } from './ui/UnitTooltip.js';
 import { GameOverModal } from './ui/GameOverModal.js';
 import { PlacedUnit, UnitPlacement } from '@tiny-tactics/shared';
 import { UNITS } from '@tiny-tactics/data';
@@ -24,6 +25,7 @@ export const App: React.FC = () => {
 
   const [, setTick] = useState(0);
   const [selectedUnit, setSelectedUnit] = useState<PlacedUnit | null>(null);
+  const [hoveredUnit, setHoveredUnit] = useState<{ unit: PlacedUnit; screenPos: { x: number; y: number } } | null>(null);
   const [gameOverData, setGameOverData] = useState<{ winnerName: string; rankings: any[] } | null>(null);
   const [damagePopups, setDamagePopups] = useState<DamagePopup[]>([]);
 
@@ -40,6 +42,13 @@ export const App: React.FC = () => {
       (window as any).__client = client;
 
       scene.onUnitSelected = unit => setSelectedUnit(unit);
+      scene.onUnitHovered = (unit, screenPos) => {
+        if (unit && screenPos) {
+          setHoveredUnit({ unit, screenPos });
+        } else {
+          setHoveredUnit(null);
+        }
+      };
       scene.onMoveRequested = (instanceId: string, target: UnitPlacement) => {
         client.sendCommand({ type: 'moveUnit', instanceId, target });
       };
@@ -163,6 +172,15 @@ export const App: React.FC = () => {
             client={client}
             phase={client.phase}
           />
+
+          {hoveredUnit && (!selectedUnit || selectedUnit.instanceId !== hoveredUnit.unit.instanceId) && (
+            <UnitTooltip
+              unit={hoveredUnit.unit}
+              screenPos={hoveredUnit.screenPos}
+              isOwner={true}
+              phase={client.phase}
+            />
+          )}
         </>
       )}
 

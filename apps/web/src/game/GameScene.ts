@@ -59,6 +59,7 @@ export class GameScene {
 
   // Callbacks to React UI
   public onUnitSelected?: (unit: PlacedUnit | null) => void;
+  public onUnitHovered?: (unit: PlacedUnit | null, screenPos: { x: number; y: number } | null) => void;
   public onMoveRequested?: (instanceId: string, target: UnitPlacement) => void;
   public onSpawnDamageText?: (damage: number, screenPos: { x: number; y: number }, isCrit?: boolean) => void;
 
@@ -201,6 +202,28 @@ export class GameScene {
             this.updateSelectionMesh();
           }
         }
+        if (this.onUnitHovered) this.onUnitHovered(null, null);
+      } else {
+        // Unit Hover Tooltip detection
+        const unitHitMeshes: THREE.Object3D[] = [];
+        for (const rUnit of this.units.values()) {
+          unitHitMeshes.push(rUnit.parts.root);
+        }
+
+        const unitHits = this.raycaster.intersectObjects(unitHitMeshes, true);
+        if (unitHits.length > 0) {
+          let current: THREE.Object3D | null = unitHits[0].object;
+          while (current && !current.userData?.parts) current = current.parent;
+          if (current) {
+            const found = Array.from(this.units.values()).find(u => u.parts.root === current);
+            if (found) {
+              const screenPos = this.worldToScreen(found.parts.root.position);
+              if (this.onUnitHovered) this.onUnitHovered(found.data, screenPos);
+            }
+          }
+        } else {
+          if (this.onUnitHovered) this.onUnitHovered(null, null);
+        }
       }
 
       this.updateHoverHighlight();
@@ -256,8 +279,13 @@ export class GameScene {
       this.renderer.setSize(w, h);
     };
 
+    const onPointerLeave = () => {
+      if (this.onUnitHovered) this.onUnitHovered(null, null);
+    };
+
     container.addEventListener('pointerdown', onPointerDown);
     container.addEventListener('pointermove', onPointerMove);
+    container.addEventListener('pointerleave', onPointerLeave);
     window.addEventListener('pointerup', onPointerUp);
     container.addEventListener('click', onClick);
     window.addEventListener('resize', onResize);
@@ -265,6 +293,7 @@ export class GameScene {
     this.cleanupEvents = () => {
       container.removeEventListener('pointerdown', onPointerDown);
       container.removeEventListener('pointermove', onPointerMove);
+      container.removeEventListener('pointerleave', onPointerLeave);
       window.removeEventListener('pointerup', onPointerUp);
       container.removeEventListener('click', onClick);
       window.removeEventListener('resize', onResize);
