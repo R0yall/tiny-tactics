@@ -61,9 +61,9 @@ export class GameScene {
     const height = container.clientHeight || window.innerHeight;
 
     // Perspective camera positioned so entire 8x8 board and all 8 bench slots are clearly visible above shop
-    this.camera = new THREE.PerspectiveCamera(46, width / height, 0.1, 100);
-    this.camera.position.set(0, 16.0, 13.0);
-    this.camera.lookAt(0, 0, 3.8);
+    this.camera = new THREE.PerspectiveCamera(48, width / height, 0.1, 100);
+    this.camera.position.set(0, 19.5, 10.0);
+    this.camera.lookAt(0, 0, 4.8);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(width, height);
@@ -229,6 +229,13 @@ export class GameScene {
             // Deselect
             this.selectedUnitId = null;
             if (this.onUnitSelected) this.onUnitSelected(null);
+          } else if (this.selectedUnitId) {
+            // Swap with target ally unit's placement
+            if (this.onMoveRequested) {
+              this.onMoveRequested(this.selectedUnitId, clickedUnit.data.placement);
+            }
+            this.selectedUnitId = null;
+            if (this.onUnitSelected) this.onUnitSelected(null);
           } else {
             this.selectedUnitId = clickedId;
             if (this.onUnitSelected) this.onUnitSelected(clickedUnit.data);
@@ -261,6 +268,21 @@ export class GameScene {
     }
   }
 
+  public selectUnitById(instanceId: string | null): void {
+    if (!instanceId) {
+      this.selectedUnitId = null;
+      this.updateSelectionMesh();
+      if (this.onUnitSelected) this.onUnitSelected(null);
+      return;
+    }
+    const unit = this.units.get(instanceId);
+    if (unit) {
+      this.selectedUnitId = instanceId;
+      this.updateSelectionMesh();
+      if (this.onUnitSelected) this.onUnitSelected(unit.data);
+    }
+  }
+
   private updateSelectionMesh(): void {
     if (!this.selectedUnitId || this.isSimulating) {
       this.selectionMesh.visible = false;
@@ -271,7 +293,8 @@ export class GameScene {
       this.selectionMesh.visible = false;
       return;
     }
-    this.selectionMesh.position.set(unit.parts.root.position.x, 0.12, unit.parts.root.position.z);
+    const groundY = unit.parts.root.position.y >= 0.2 ? 0.24 : 0.12;
+    this.selectionMesh.position.set(unit.parts.root.position.x, groundY, unit.parts.root.position.z);
     this.selectionMesh.visible = true;
   }
 

@@ -22,15 +22,15 @@ export const ShopUnitPreview: React.FC<ShopUnitPreviewProps> = ({ unitDef }) => 
   }, [frames]);
 
   if (frames.length === 0) {
-    return <div className="w-[110px] h-[90px]" />;
+    return <div className="w-[84px] h-[66px]" />;
   }
 
   return (
-    <div className="w-[110px] h-[90px] flex items-center justify-center overflow-hidden pointer-events-none select-none">
+    <div className="w-[84px] h-[66px] flex items-center justify-center overflow-hidden pointer-events-none select-none">
       <img
         src={frames[frameIndex]}
         alt={unitDef.name}
-        className="w-[100px] h-[85px] object-contain drop-shadow-md"
+        className="w-[78px] h-[62px] object-contain drop-shadow-md"
         draggable={false}
       />
     </div>
