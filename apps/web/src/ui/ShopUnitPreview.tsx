@@ -1,85 +1,38 @@
-import React, { useEffect, useRef } from 'react';
-import * as THREE from 'three';
+import React, { useState, useEffect } from 'react';
 import { UnitDefinition } from '@tiny-tactics/shared';
-import { UnitFactory } from '../game/units/UnitFactory.js';
-import { UnitAnimator } from '../game/units/UnitAnimator.js';
+import { UnitPortraitGenerator } from '../game/units/UnitPortraitGenerator.js';
 
 interface ShopUnitPreviewProps {
   unitDef: UnitDefinition;
 }
 
 export const ShopUnitPreview: React.FC<ShopUnitPreviewProps> = ({ unitDef }) => {
-  const mountRef = useRef<HTMLDivElement>(null);
+  const [frameIndex, setFrameIndex] = useState(0);
+  const frames = React.useMemo(() => UnitPortraitGenerator.getFrames(unitDef), [unitDef]);
 
   useEffect(() => {
-    if (!mountRef.current) return;
+    if (frames.length === 0) return;
 
-    const width = 110;
-    const height = 90;
+    // Cycle through turntable frames at ~12fps (80ms per frame)
+    const interval = setInterval(() => {
+      setFrameIndex(prev => (prev + 1) % frames.length);
+    }, 80);
 
-    const scene = new THREE.Scene();
-    const camera = new THREE.PerspectiveCamera(40, width / height, 0.1, 20);
-    camera.position.set(0, 0.9, 2.6);
-    camera.lookAt(0, 0.45, 0);
+    return () => clearInterval(interval);
+  }, [frames]);
 
-    const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    mountRef.current.appendChild(renderer.domElement);
-
-    // Soft studio lighting for the unit portrait
-    const ambient = new THREE.AmbientLight(0xffffff, 1.2);
-    scene.add(ambient);
-
-    const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
-    dirLight.position.set(2, 3, 2);
-    scene.add(dirLight);
-
-    const backLight = new THREE.DirectionalLight(0x38bdf8, 0.8);
-    backLight.position.set(-2, 1, -2);
-    scene.add(backLight);
-
-    // Create procedural unit mesh
-    const parts = UnitFactory.createUnitMesh(unitDef, 1);
-    // Hide overhead HP/Mana bars in shop preview
-    parts.hpBar.visible = false;
-    parts.manaBar.visible = false;
-    scene.add(parts.root);
-
-    const animator = new UnitAnimator(parts);
-    animator.play('idle');
-
-    let animId: number;
-    let lastTime = performance.now();
-
-    const animate = () => {
-      animId = requestAnimationFrame(animate);
-      const now = performance.now();
-      const delta = Math.min(0.1, (now - lastTime) / 1000);
-      lastTime = now;
-
-      animator.update(delta);
-      // Gentle slow turntable rotation
-      parts.root.rotation.y += delta * 0.6;
-
-      renderer.render(scene, camera);
-    };
-
-    animate();
-
-    return () => {
-      cancelAnimationFrame(animId);
-      renderer.dispose();
-      if (mountRef.current && renderer.domElement) {
-        mountRef.current.removeChild(renderer.domElement);
-      }
-    };
-  }, [unitDef]);
+  if (frames.length === 0) {
+    return <div className="w-[110px] h-[90px]" />;
+  }
 
   return (
-    <div
-      ref={mountRef}
-      className="w-[110px] h-[90px] flex items-center justify-center overflow-hidden pointer-events-none"
-    />
+    <div className="w-[110px] h-[90px] flex items-center justify-center overflow-hidden pointer-events-none select-none">
+      <img
+        src={frames[frameIndex]}
+        alt={unitDef.name}
+        className="w-[100px] h-[85px] object-contain drop-shadow-md"
+        draggable={false}
+      />
+    </div>
   );
 };

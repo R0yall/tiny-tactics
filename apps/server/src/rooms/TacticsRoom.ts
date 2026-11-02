@@ -45,6 +45,7 @@ export class TacticsRoom extends Room<TacticsRoomState> {
   private pool = new SharedUnitPool();
   private pairingManager = new MatchPairingManager();
   private privatePlayers: Map<string, PrivatePlayerData> = new Map();
+  private clientToPlayerId: Map<string, string> = new Map();
   private phaseInterval?: NodeJS.Timeout;
   private prng = new SeededPRNG(Date.now());
 
@@ -68,7 +69,7 @@ export class TacticsRoom extends Room<TacticsRoomState> {
 
   private registerMessageHandlers(): void {
     this.onMessage('command', (client, message: ClientCommand) => {
-      const playerId = client.sessionId;
+      const playerId = this.clientToPlayerId.get(client.sessionId) || client.sessionId;
       const player = this.state.players.get(playerId);
       if (!player) return;
 
@@ -180,6 +181,7 @@ export class TacticsRoom extends Room<TacticsRoomState> {
     pState.activeAlliancesJson = '{}';
 
     this.state.players.set(playerId, pState);
+    this.clientToPlayerId.set(client.sessionId, playerId);
 
     const resumeToken = `tok_${Math.random().toString(36).substring(2)}${Date.now()}`;
     this.privatePlayers.set(playerId, {
@@ -244,6 +246,7 @@ export class TacticsRoom extends Room<TacticsRoomState> {
       }
       priv.client = client;
       player.isConnected = true;
+      this.clientToPlayerId.set(client.sessionId, playerId);
 
       client.send('sessionInit', {
         playerId,
@@ -350,6 +353,50 @@ export class TacticsRoom extends Room<TacticsRoomState> {
     for (const [pId, player] of this.state.players.entries()) {
       const priv = this.privatePlayers.get(pId);
       if (priv) priv.lockedInGold = player.gold;
+    }
+
+    // Auto-deploy units from bench to board if player has available capacity
+    for (const [pId, player] of this.state.players.entries()) {
+      if (player.eliminated) continue;
+      const priv = this.privatePlayers.get(pId);
+      if (!priv) continue;
+
+      let boardUnits: PlacedUnit[] = [];
+      try {
+        boardUnits = JSON.parse(player.boardUnitsJson || '[]');
+      } catch {}
+
+      const maxBoardCapacity = player.level;
+      if (boardUnits.length < maxBoardCapacity && priv.benchUnits.length > 0) {
+        const occupied = new Set(
+          boardUnits.map(u => `${(u.placement as { area: 'board'; x: number; y: number }).x}_${(u.placement as { area: 'board'; x: number; y: number }).y}`)
+        );
+
+        while (boardUnits.length < maxBoardCapacity && priv.benchUnits.length > 0) {
+          const unit = priv.benchUnits.shift()!;
+          let placed = false;
+          for (let y = 0; y < PROTOCOL_CONSTANTS.PLAYER_ROWS; y++) {
+            for (let x = 0; x < PROTOCOL_CONSTANTS.BOARD_WIDTH; x++) {
+              if (!occupied.has(`${x}_${y}`)) {
+                occupied.add(`${x}_${y}`);
+                unit.placement = { area: 'board', x, y };
+                boardUnits.push(unit);
+                placed = true;
+                break;
+              }
+            }
+            if (placed) break;
+          }
+          if (!placed) {
+            priv.benchUnits.unshift(unit);
+            break;
+          }
+        }
+
+        player.boardUnitsJson = JSON.stringify(boardUnits);
+        this.updatePlayerAlliances(pId);
+        this.sendPrivateState(pId);
+      }
     }
 
     // Generate pairings

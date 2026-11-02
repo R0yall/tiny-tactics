@@ -60,10 +60,10 @@ export class GameScene {
     const width = container.clientWidth || window.innerWidth;
     const height = container.clientHeight || window.innerHeight;
 
-    // Perspective camera angled to view full board + bench with room for shop
-    this.camera = new THREE.PerspectiveCamera(48, width / height, 0.1, 100);
-    this.camera.position.set(0, 13.0, 11.2);
-    this.camera.lookAt(0, 0, 0.8);
+    // Perspective camera positioned so entire 8x8 board and all 8 bench slots are clearly visible above shop
+    this.camera = new THREE.PerspectiveCamera(46, width / height, 0.1, 100);
+    this.camera.position.set(0, 16.0, 13.0);
+    this.camera.lookAt(0, 0, 3.8);
 
     this.renderer = new THREE.WebGLRenderer({ antialias: true });
     this.renderer.setSize(width, height);

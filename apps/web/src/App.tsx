@@ -8,6 +8,8 @@ import { AlliancePanel } from './ui/AlliancePanel.js';
 import { UnitDetailsModal } from './ui/UnitDetailsModal.js';
 import { GameOverModal } from './ui/GameOverModal.js';
 import { PlacedUnit, UnitPlacement } from '@tiny-tactics/shared';
+import { UNITS } from '@tiny-tactics/data';
+import { UnitPortraitGenerator } from './game/units/UnitPortraitGenerator.js';
 
 interface DamagePopup {
   id: string;
@@ -24,6 +26,11 @@ export const App: React.FC = () => {
   const [selectedUnit, setSelectedUnit] = useState<PlacedUnit | null>(null);
   const [gameOverData, setGameOverData] = useState<{ winnerName: string; rankings: any[] } | null>(null);
   const [damagePopups, setDamagePopups] = useState<DamagePopup[]>([]);
+
+  useEffect(() => {
+    // Preload rotating 3D turntables into lightweight cached frames
+    UnitPortraitGenerator.preloadAll(UNITS);
+  }, []);
 
   useEffect(() => {
     if (containerRef.current && !sceneRef.current) {
